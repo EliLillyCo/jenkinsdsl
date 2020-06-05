@@ -1,0 +1,36 @@
+{
+  "data": {
+    "repository": {
+      "defaultBranchRef": {
+        "name": "master"
+      },
+      "pullRequests": {
+        "nodes": [
+          {
+            "number": 194,
+            "mergeCommit": {
+              "oid": "fe934d502a47bd8f014a0e179aafac28cc5ed7ab"
+            }
+          },
+          {
+            "number": 195,
+            "mergeCommit": {
+              "oid": "fe934d502a47bd8f014a0e179aafac28cc5ed7ef"
+            }
+          },
+          {
+            "number": 196,
+            "mergeCommit": {
+              "oid": "fe9fbd502a47bd8f014a0e179aafac28cc5ed7da"
+            }
+          }
+        ]
+      },
+      "ref": {
+        "target": {
+          "oid": "fe9fbd502a47bd8f014a0e179aafac28cc5ed7da"
+        }
+      }
+    }
+  }
+}

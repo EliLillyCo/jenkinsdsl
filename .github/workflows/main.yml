@@ -1,0 +1,34 @@
+
+name: CI
+
+on:
+  push:
+    branches: [ feature/* ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Gradle Build
+        uses: eskatos/gradle-command-action@v1
+        with:
+          arguments: build
+
+      - name: Upload Build Artifacts
+        uses: eskatos/gradle-command-action@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          arguments: publish
+  

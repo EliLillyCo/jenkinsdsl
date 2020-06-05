@@ -1,0 +1,15 @@
+/.settings
+/*.project
+/*.classpath
+/target
+/.gradle
+*.DS_Store
+/build/
+/bin/
+/.vscode/
+/.groovy
+/gradle.properties
+.idea/
+.externalToolBuilders/
+/out
+*.iml

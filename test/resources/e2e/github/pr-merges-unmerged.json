@@ -1,0 +1,17 @@
+{
+  "data": {
+    "repository": {
+      "defaultBranchRef": {
+        "name": "master"
+      },
+      "pullRequests": {
+        "nodes": []
+      },
+      "ref": {
+        "target": {
+          "oid": "adba7500002b6f3b9267ad6f8cdfcbf4f9b336a1"
+        }
+      }
+    }
+  }
+}

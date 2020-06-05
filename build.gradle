@@ -1,0 +1,250 @@
+import groovy.transform.Field
+import java.text.SimpleDateFormat
+
+apply plugin: 'groovy'
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'jacoco'
+apply plugin: "io.spring.dependency-management"
+
+//// Configuration
+group = 'com.lilly.opensource.edat'
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
+sourceSets {
+  main {
+    groovy {
+      srcDirs = ['src', 'vars', 'sim']
+    }
+  }
+
+  test {
+    groovy { srcDirs = ['test/src', 'test/resources', 'test/vars', 'test/sim'] }
+  }
+}
+
+
+//// Build and Testing
+
+compileGroovy {
+  options.compilerArgs << '-proc:none'
+  groovyOptions.configurationScript = file("gradle/config.groovy")
+}
+
+compileTestGroovy { options.compilerArgs << '-proc:none' }
+
+test.testLogging {
+  exceptionFormat "full"
+}
+
+repositories {
+  maven {
+    url 'https://elilillyco.jfrog.io/elilillyco/Lilly-Maven'
+  }
+}
+
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+      classpath "io.spring.gradle:dependency-management-plugin:1.0.3.RELEASE"
+  }
+}
+
+
+dependencyManagement {
+  imports {
+      mavenBom 'com.amazonaws:aws-java-sdk-bom:1.11.485'
+  }
+}
+
+dependencies {
+  implementation 'org.codehaus.groovy:groovy-all:2.4.15'
+  implementation 'org.jenkins-ci.main:jenkins-core:2.141'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.57', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.17', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'branch-api', version: '2.0.21', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'cloudbees-folder', version: '6.7', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'scm-api', version: '2.3.0', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-step-api', version: '2.16', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-api', version: '2.28', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-job', version: '2.25', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-support', version: '2.23', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-multibranch', version: '2.20', ext: 'jar'
+  implementation group: 'com.openshift.jenkins.plugins', name: 'openshift-client', version: '1.0.22', ext: 'jar'
+  implementation group: 'com.cloudbees', name: 'groovy-cps', version: '1.24', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-durable-task-step', version: '2.26', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'durable-task', version: '1.28', ext: 'jar'
+  implementation 'com.amazonaws:aws-java-sdk-core'
+  implementation 'com.amazonaws:aws-java-sdk-s3'
+  implementation 'com.amazonaws:aws-java-sdk-sts'
+  implementation group: 'org.jenkins-ci.plugins', name: 'cloudbees-folder', version: '6.7', ext: 'jar'
+  implementation group: 'org.apache.ivy', name: 'ivy', version: '2.4.0', ext: 'jar'
+  implementation 'javax.servlet:javax.servlet-api:4.0.1'
+  implementation 'org.spockframework:spock-core:1.2-groovy-2.4'
+  implementation 'org.yaml:snakeyaml:1.23'
+  testImplementation 'junit:junit:4.12'
+  testRuntimeOnly 'net.bytebuddy:byte-buddy:1.8.21'
+  testRuntimeOnly 'org.objenesis:objenesis:2.6'
+  testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.25'
+}
+
+//// Sources and GroovyDoc Jars
+
+task sourcesJar (type: Jar) {
+  archiveBaseName = project.name
+  classifier 'sources'
+  from sourceSets.main.allSource
+}
+
+def d    = new Date()
+def time = new SimpleDateFormat( "HH:mm '(GMT'Z')'" ).format( d )
+def date = new SimpleDateFormat( 'MMMM dd, yyyy' ).format( d )
+
+groovydoc {
+  windowTitle = 'Lilly Jenkins DSL Core'
+  docTitle = "Lilly Jenkins DSL ${version} API"
+  header = '<a href="https://github.com/elilillyco/jenkinsdsl" target="_blank">Lilly Jenkins DSL Core</a>'
+  footer = '<a href="https://github.com/elilillyco/jenkinsdsl" target="_blank">Lilly Jenkins DSL Core</a> API documentation was generated at ' + "$time on $date."
+  link 'http://download.oracle.com/javase/7/docs/api/', 'java.'
+  link 'http://docs.groovy-lang.org/latest/html/gapi/', 'groovy.', 'org.codehaus.groovy.'
+}
+
+task groovydocJar(type: Jar, dependsOn: groovydoc) {
+  archiveBaseName = project.name
+  classifier 'groovydoc'
+  from groovydoc.destinationDir
+}
+
+artifacts {
+  archives sourcesJar
+  archives groovydocJar
+}
+
+assemble.dependsOn sourcesJar, groovydocJar
+
+//// Maven POM and Publications
+
+publishing {
+  repositories {
+    maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/elilillyco/jenkinsdsl")
+      credentials {
+        username = System.getenv("GITHUB_ACTOR")
+        password = System.getenv("GITHUB_TOKEN")
+      }
+    }
+  }
+
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+//      artifact tasks.sourcesJar
+//      artifact tasks.groovydocJar
+      pom {
+        name = "Lilly's Jenkins DSL Core"
+        description = 'The Jenkins DSL is a project originally developed by engineers from Eli Lilly and Company and DMI\'s Application Development division as the foundation for all of Lilly\'s Enterprise Jenkins pipelines. '
+        url = 'http://github.com/elilillyco/jenkinsdsl'
+        licenses {
+          license {
+            name = 'The Apache License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+        developers {
+          developer {
+            id = 'jarrettalexander77'
+            name = 'Jarrett Alexander'
+            email = 'alexander_jarrett@lilly.com'
+            url = 'https://github.com/jarrettalexander77'
+          }
+          developer {
+            id = 'lavanyach1'
+            name = 'Lavanya Chennareddy'
+            email = 'lchennareddy@dminc.com'
+            url = 'https://github.com/lavanyach1'
+          }
+          developer {
+            id = 'delvindefoe'
+            name = 'Delvin Defoe'
+            email = 'ddefoe@dminc.com'
+            url = 'https://github.com/delvindefoe'
+          }
+          developer {
+            id = 'jrgarlick'
+            name = 'Jim Garlick'
+            email = 'jgarlick@dminc.com'
+            url = 'https://github.com/jrgarlick'
+          }
+          developer {
+            id = 'NickLiffen'
+            name = 'Nick Liffen'
+            email = 'liffen_nicholas@lilly.com'
+            url = 'https://github.com/NickLiffen'
+          }
+          developer {
+            id = 'crupakheti'
+            name = 'Chandan Rupakheti'
+            email = 'crupakheti@dminc.com'
+            url = 'https://github.com/crupakheti'
+          }
+          developer {
+            id = 'mszewczyk'
+            name = 'Marc Szewczyk'
+            email = 'mszewczyk@dminc.com'
+            url = 'https://github.com/mszewczyk'
+          }
+        }
+        scm {
+          connection = 'scm:git:https://github.com/EliLillyCo/jenkinsdsl.git'
+          developerConnection = 'scm:git:https://github.com/EliLillyCo/jenkinsdsl.git'
+          url = 'https://github.com/EliLillyCo/jenkinsdsl'
+        }
+      }
+    }
+  }
+}
+
+//// Jacoco Coverage
+
+jacoco {
+  toolVersion = "0.8.5"
+}
+
+jacocoTestReport {
+  reports {
+    xml.enabled true
+    csv.enabled false
+    html.enabled true
+  }
+}
+
+test.finalizedBy(jacocoTestReport)
+
+task codeCoverageInfo(dependsOn: jacocoTestReport) {
+  ext.srcFile = file("${reportsDir}/jacoco/test/jacocoTestReport.xml")
+  doLast {
+    println "Parsing code coverage data ..."
+
+    def parser = new XmlParser()
+    parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false);
+    parser.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+    parser.setFeature("http://xml.org/sax/features/namespaces", false)
+
+    def reportNode = parser.parse(srcFile)
+    reportNode.children().each {
+      if (it.name() == "counter") {
+        String type = it.@type
+        float missed = it.@missed as float
+        float covered = it.@covered as float
+        float percentage = covered / (missed + covered) * 100
+        println "Code Coverage[$type]: $percentage%"
+      }
+    }
+  }
+}
+jacocoTestReport.finalizedBy(codeCoverageInfo)

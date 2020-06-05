@@ -1,0 +1,16 @@
+<sample>
+    <!-- Heroku & Freestyle -->
+    <jenkins.scm.impl.trait.WildcardSCMSourceFilterTrait>
+        <includes>test-repo-name</includes>
+    </jenkins.scm.impl.trait.WildcardSCMSourceFilterTrait>
+    
+    <!-- Artifactory -->
+    <jenkins.scm.impl.trait.RegexSCMSourceFilterTrait>
+        <regex>test-repo-name2</regex>
+    </jenkins.scm.impl.trait.RegexSCMSourceFilterTrait>
+    <com.cloudbees.hudson.plugins.folder.properties.EnvVarsFolderProperty>
+        <properties>MODULE-NAME=module-name
+CLOUD-ARTIFACTORY-REPO-NAME=cloud-artifactory
+ON-PREM-ARTIFACTORY-REPO-NAME=prem-artifactory</properties>
+    </com.cloudbees.hudson.plugins.folder.properties.EnvVarsFolderProperty>
+</sample>

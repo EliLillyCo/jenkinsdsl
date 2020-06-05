@@ -1,0 +1,41 @@
+{
+  "url": "https://api.github.com/repos/EliLillyCo/CIRR_JenkinsPipelines/releases/21155480",
+  "assets_url": "https://api.github.com/repos/EliLillyCo/CIRR_JenkinsPipelines/releases/21155480/assets",
+  "upload_url": "https://uploads.github.com/repos/EliLillyCo/CIRR_JenkinsPipelines/releases/21155480/assets{?name,label}",
+  "html_url": "https://github.com/EliLillyCo/CIRR_JenkinsPipelines/releases/tag/v1.0.2-test",
+  "id": 21155480,
+  "node_id": "MDc6UmVsZWFzZTIxMTU1NDgw",
+  "tag_name": "v1.0.2-test",
+  "target_commitish": "dsl-python-starter",
+  "name": "v1.0.2-test",
+  "draft": false,
+  "author": {
+    "login": "crupakheti",
+    "id": 41346607,
+    "node_id": "MDQ6VXNlcjQxMzQ2NjA3",
+    "avatar_url": "https://avatars1.githubusercontent.com/u/41346607?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/crupakheti",
+    "html_url": "https://github.com/crupakheti",
+    "followers_url": "https://api.github.com/users/crupakheti/followers",
+    "following_url": "https://api.github.com/users/crupakheti/following{/other_user}",
+    "gists_url": "https://api.github.com/users/crupakheti/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/crupakheti/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/crupakheti/subscriptions",
+    "organizations_url": "https://api.github.com/users/crupakheti/orgs",
+    "repos_url": "https://api.github.com/users/crupakheti/repos",
+    "events_url": "https://api.github.com/users/crupakheti/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/crupakheti/received_events",
+    "type": "User",
+    "site_admin": false
+  },
+  "prerelease": false,
+  "created_at": "2019-10-28T21:03:39Z",
+  "published_at": "2019-11-01T17:54:20Z",
+  "assets": [
+
+  ],
+  "tarball_url": "https://api.github.com/repos/EliLillyCo/CIRR_JenkinsPipelines/tarball/v1.0.2-test",
+  "zipball_url": "https://api.github.com/repos/EliLillyCo/CIRR_JenkinsPipelines/zipball/v1.0.2-test",
+  "body": "This is a test."
+}

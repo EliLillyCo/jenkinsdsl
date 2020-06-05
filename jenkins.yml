@@ -1,0 +1,2 @@
+checkmarx_all_pull_requests: false
+maven_publishing: true

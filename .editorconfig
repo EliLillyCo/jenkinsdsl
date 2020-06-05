@@ -1,0 +1,17 @@
+# Top-most EditorConfig file
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.{groovy,gradle,java}]
+charset = utf-8
+
+[*.{groovy,gradle,java}]
+indent_style = space
+indent_size = 2
+
+[Jenkinsfile]
+indent_style = space
+indent_size = 2
