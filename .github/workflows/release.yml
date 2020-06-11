@@ -1,0 +1,30 @@
+
+name: RELEASE
+
+on:
+  release:
+    types: [created]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Set version var
+          run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF#refs/*/}
+
+      - name: Publish Release Artifacts
+        if: github.ref == 'refs/heads/develop'
+        uses: eskatos/gradle-command-action@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+        with:
+          arguments: -Pversion=${RELEASE_VERSION} publish
