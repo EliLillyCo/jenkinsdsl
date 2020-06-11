@@ -17,15 +17,16 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::$(echo ${GITHUB_REF##*/})
 
-#      - name: Publish Release Artifact
-#        uses: eskatos/gradle-command-action@v1
-#        env:
-#          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-#          RELEASE_VERSION: ${{ steps.get_version.outputs.VERSION }}
-#        with:
-#          arguments: -Pversion=${RELEASE_VERSION} publish
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
 
-      - name: Show the version
+      - name: Publish artifact
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.get_version.outputs.VERSION }}
-        run: echo ${RELEASE_VERSION}
+        run: |
+          echo "New version: ${RELEASE_VERSION}"
+          echo "Github username: ${GITHUB_ACTOR}"
+          ./gradlew -Pversion=${RELEASE_VERSION} publish

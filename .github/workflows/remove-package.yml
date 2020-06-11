@@ -1,12 +1,12 @@
 
-name: RELEASE
+name: REMOVE-PACKAGE
 
 on:
   release:
     types: [deleted]
 
 jobs:
-  perform-release:
+  remove-package:
     runs-on: ubuntu-latest
 
     steps:
