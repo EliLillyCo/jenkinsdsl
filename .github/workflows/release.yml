@@ -6,7 +6,7 @@ on:
     types: [created]
 
 jobs:
-  build:
+  perform-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,8 +22,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
 
-      - name: Publish Release Artifacts
-        if: github.ref == 'refs/heads/develop'
+      - name: Publish Release Artifact
         uses: eskatos/gradle-command-action@v1
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
