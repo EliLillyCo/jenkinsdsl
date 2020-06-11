@@ -3,7 +3,7 @@ name: SNAPSHOT
 
 on:
   push:
-    branches: [ develop, feature/* ]
+    branches: [ master, develop, feature/* ]
   pull_request:
     branches: [ master ]
 
@@ -26,7 +26,7 @@ jobs:
           arguments: build
 
       - name: Upload Build Artifacts
-        if: github.ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/master'
         uses: eskatos/gradle-command-action@v1
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
