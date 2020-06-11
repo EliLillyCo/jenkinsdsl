@@ -15,12 +15,17 @@ jobs:
 
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo ::set-output name=VERSION::$(echo ${GITHUB_REF##*/})
 
-      - name: Publish Release Artifact
-        uses: eskatos/gradle-command-action@v1
+#      - name: Publish Release Artifact
+#        uses: eskatos/gradle-command-action@v1
+#        env:
+#          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+#          RELEASE_VERSION: ${{ steps.get_version.outputs.VERSION }}
+#        with:
+#          arguments: -Pversion=${RELEASE_VERSION} publish
+
+      - name: Show the version
         env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           RELEASE_VERSION: ${{ steps.get_version.outputs.VERSION }}
-        with:
-          arguments: -Pversion=${RELEASE_VERSION} publish
+        run: echo ${RELEASE_VERSION}
