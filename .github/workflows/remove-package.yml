@@ -1,0 +1,24 @@
+
+name: RELEASE
+
+on:
+  release:
+    types: [deleted]
+
+jobs:
+  perform-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo ${GITHUB_REF##*/})
+
+      - name: Remove Deleted Release Package
+        uses: actions/delete-package-versions@v1
+        with:
+          package-name: 'com.lilly.opensource.edat.jenkinsdsl'
+          package-version-ids: ${{ steps.get_version.outputs.VERSION }}
