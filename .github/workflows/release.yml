@@ -29,4 +29,4 @@ jobs:
         run: |
           echo "New version: ${RELEASE_VERSION}"
           echo "Github username: ${GITHUB_ACTOR}"
-          ./gradlew -Pversion=${RELEASE_VERSION} publish
+          ./gradlew -Pversion=${RELEASE_VERSION} test publish
