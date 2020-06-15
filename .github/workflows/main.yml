@@ -20,6 +20,14 @@ jobs:
         with:
           java-version: 11
 
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/gradle-jdk11@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+          command: monitor
+
       - name: Gradle Build
         uses: eskatos/gradle-command-action@v1
         with:
