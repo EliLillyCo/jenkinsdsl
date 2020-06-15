@@ -15,14 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/gradle-jdk11@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-          command: monitor
-
       - name: Setup Java
         uses: actions/setup-java@v1
         with:
