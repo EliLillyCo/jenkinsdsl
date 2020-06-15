@@ -1,5 +1,5 @@
 
-name: SNAPSHOT
+name: SNYK
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  run_snyk:
     runs-on: ubuntu-latest
 
     steps:
