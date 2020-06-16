@@ -60,6 +60,13 @@ buildscript {
   }
 }
 
+configurations {
+  // Monitor these when upgrading jenkins-core
+  compileClasspath {
+    resolutionStrategy.force 'commons-beanutils:commons-beanutils:1.9.4'
+    resolutionStrategy.force 'commons-fileupload:commons-fileupload:1.3.3'
+  }
+}
 
 dependencyManagement {
   imports {
