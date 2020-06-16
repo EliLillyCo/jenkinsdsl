@@ -69,9 +69,9 @@ dependencyManagement {
 
 dependencies {
   implementation 'org.codehaus.groovy:groovy-all:2.4.15'
-  implementation 'org.jenkins-ci.main:jenkins-core:2.141'
-  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.57', ext: 'jar'
-  implementation group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.17', ext: 'jar'
+  implementation 'org.jenkins-ci.main:jenkins-core:2.238'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.80', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.23', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'branch-api', version: '2.0.21', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'cloudbees-folder', version: '6.7', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'scm-api', version: '2.3.0', ext: 'jar'
