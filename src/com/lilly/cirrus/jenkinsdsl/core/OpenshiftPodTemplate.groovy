@@ -2,12 +2,6 @@ package com.lilly.cirrus.jenkinsdsl.core
 
 class OpenshiftPodTemplate extends PodTemplate {
 
-  @Override
-  String getLabel() {
-    if(!this.@label) this.@label = "oc-dsl-${UUID.randomUUID().toString()}"
-    return this.@label
-  }
-
   String getImagePullSecretYaml() {
     if (!this.@imagePullSecrets) return ''
     StringBuilder builder = new StringBuilder()
