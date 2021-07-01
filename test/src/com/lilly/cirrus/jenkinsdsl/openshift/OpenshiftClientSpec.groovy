@@ -7,7 +7,7 @@ import com.lilly.cirrus.jenkinsdsl.core.CirrusPipelineException
 import com.lilly.cirrus.jenkinsdsl.sim.SimFactory
 import org.jenkinsci.plugins.credentialsbinding.impl.CredentialNotFoundException
 
-class OpenShiftClientSpec extends CirrusDSLSpec {
+class OpenshiftClientSpec extends CirrusDSLSpec {
   String getTestString(int length) {
     StringBuilder builder = new StringBuilder()
     for (int i = 0; i < length; ++i) {
