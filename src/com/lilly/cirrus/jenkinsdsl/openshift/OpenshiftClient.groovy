@@ -142,7 +142,8 @@ class OpenshiftClient implements Serializable {
         "strategy": {
           "type": "Docker",
           "dockerStrategy": {
-            "noCache": true
+            "noCache": true,
+            "pullSecret": "${registrySecretName}"
           }
         }
       }

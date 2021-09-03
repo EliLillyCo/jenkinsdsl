@@ -6,6 +6,8 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: "io.spring.dependency-management"
+apply plugin: 'org.owasp.dependencycheck'
+apply plugin: 'com.github.ben-manes.versions'
 
 //// Configuration
 group = 'com.lilly.opensource.edat'
@@ -40,20 +42,23 @@ test.testLogging {
 }
 
 repositories {
-  maven {
-    url 'https://elilillyco.jfrog.io/elilillyco/Lilly-Maven'
-  }
+  mavenCentral()
+  jcenter()
+  maven { url 'https://repo1.maven.org/maven2/' }
+  maven { url 'https://repo.jenkins-ci.org/releases/' }
 }
 
 buildscript {
   repositories {
     mavenCentral()
+    jcenter()
   }
   dependencies {
-      classpath "io.spring.gradle:dependency-management-plugin:1.0.3.RELEASE"
+    classpath "io.spring.gradle:dependency-management-plugin:1.0.3.RELEASE"
+    classpath 'org.owasp:dependency-check-gradle:5.3.2'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.28.0'
   }
 }
-
 
 dependencyManagement {
   imports {
@@ -63,9 +68,9 @@ dependencyManagement {
 
 dependencies {
   implementation 'org.codehaus.groovy:groovy-all:2.4.15'
-  implementation 'org.jenkins-ci.main:jenkins-core:2.141'
-  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.57', ext: 'jar'
-  implementation group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.17', ext: 'jar'
+  implementation 'org.jenkins-ci.main:jenkins-core:2.238'
+  implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.80', ext: 'jar'
+  implementation group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.23', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'branch-api', version: '2.0.21', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'cloudbees-folder', version: '6.7', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'scm-api', version: '2.3.0', ext: 'jar'
@@ -78,18 +83,18 @@ dependencies {
   implementation group: 'com.cloudbees', name: 'groovy-cps', version: '1.24', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-durable-task-step', version: '2.26', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'durable-task', version: '1.28', ext: 'jar'
-  implementation 'com.amazonaws:aws-java-sdk-core'
-  implementation 'com.amazonaws:aws-java-sdk-s3'
-  implementation 'com.amazonaws:aws-java-sdk-sts'
+  implementation group: 'com.amazonaws', name: 'aws-java-sdk-core', version: '1.11.803', ext: 'jar'
+  implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.803', ext: 'jar'
+  implementation group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: '1.11.803', ext: 'jar'
   implementation group: 'org.jenkins-ci.plugins', name: 'cloudbees-folder', version: '6.7', ext: 'jar'
   implementation group: 'org.apache.ivy', name: 'ivy', version: '2.4.0', ext: 'jar'
-  implementation 'javax.servlet:javax.servlet-api:4.0.1'
-  implementation 'org.spockframework:spock-core:1.2-groovy-2.4'
-  implementation 'org.yaml:snakeyaml:1.23'
-  testImplementation 'junit:junit:4.12'
-  testRuntimeOnly 'net.bytebuddy:byte-buddy:1.8.21'
-  testRuntimeOnly 'org.objenesis:objenesis:2.6'
-  testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.25'
+  implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1', ext: 'jar'
+  implementation group: 'org.spockframework', name: 'spock-core', version: '1.2-groovy-2.4', ext: 'jar'
+  implementation group: 'org.yaml', name: 'snakeyaml', version: '1.23', ext: 'jar'
+  testImplementation group: 'junit', name: 'junit', version: '4.12', ext: 'jar'
+  testRuntimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.8.21', ext: 'jar'
+  testRuntimeOnly group: 'org.objenesis', name: 'objenesis', version: '2.6', ext: 'jar'
+  testRuntimeOnly group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25', ext: 'jar'
 }
 
 //// Sources and GroovyDoc Jars

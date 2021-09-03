@@ -8,7 +8,6 @@
 /bin/
 /.vscode/
 /.groovy
-/gradle.properties
 .idea/
 .externalToolBuilders/
 /out
