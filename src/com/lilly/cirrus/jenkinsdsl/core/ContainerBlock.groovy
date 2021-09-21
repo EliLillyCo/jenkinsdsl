@@ -30,6 +30,9 @@ abstract class ContainerBlock extends Block {
       openShiftClient = new OpenshiftClient(jenkins: this.jenkins)
       root().openShiftClient = openShiftClient
     }
+    withJenkins {
+        echo "Adding comments in the preperation of timeout for the pipeline"
+    }
 
     openShiftClient.configureCredentials(namespaceToRegistryToCredentialId)
   }
