@@ -282,6 +282,12 @@ class JenkinsSim extends Scope implements PipelineMock {
   }
 
   @Override
+  def timeout(Map args) {
+    CommandSim cmd = SimFactory.timeout(args)
+    simulate(cmd, 0)
+  }
+
+  @Override
   def error(String text) {
     CommandSim cmd = SimFactory.error(text)
     simulate(cmd, 0)
