@@ -9,7 +9,7 @@ interface PipelineMock {
   def sh(Map args)
   def dir(String path, Closure<?> body)
   def echo(String text)
-  def timeout(Map args)
+  def timeout(Map args, Closure<?> body)
   def error(String text)
   def evaluate(String text)
   def stash(Map args)

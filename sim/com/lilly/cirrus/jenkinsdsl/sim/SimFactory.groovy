@@ -23,8 +23,8 @@ class SimFactory {
     new CommandSim(type: "echo", arguments: [text: text])
   }
 
-  static CommandSim timeout(Map args) {
-    new CommandSim(type: "timeout", arguments: args)
+  static CommandSim timeout(Map args, Closure<?> body) {
+    new CommandSim(type: "timeout", arguments: args, body: body)
   }
 
   static CommandSim error(def text) {
