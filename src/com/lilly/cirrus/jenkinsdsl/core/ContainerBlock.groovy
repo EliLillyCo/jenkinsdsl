@@ -33,7 +33,7 @@ abstract class ContainerBlock extends Block {
     withJenkins {
         echo "Adding comments in the preperation of timeout for the pipeline"
 
-        timeout(time:15, unit:'SECONDS') { sleep(100000)}
+        timeout(time:60, unit:'SECONDS') { }
         // timeout(time:1, unit:'MINUTES') {}
 
         // this.jenkins.currentBuild.result = 'ABORTED'
