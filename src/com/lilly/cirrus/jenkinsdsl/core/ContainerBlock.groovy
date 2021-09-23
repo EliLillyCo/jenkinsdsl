@@ -30,15 +30,15 @@ abstract class ContainerBlock extends Block {
       openShiftClient = new OpenshiftClient(jenkins: this.jenkins)
       root().openShiftClient = openShiftClient
     }
-    withJenkins {
-        echo "Adding comments in the preperation of timeout for the pipeline"
+    // withJenkins {
+    //     echo "Adding comments in the preperation of timeout for the pipeline"
 
-        timeout(time:60, unit:'SECONDS') { }
-        // timeout(time:1, unit:'MINUTES') {}
+    //     timeout(time:60, unit:'SECONDS') { }
+    //     // timeout(time:1, unit:'MINUTES') {}
 
-        // this.jenkins.currentBuild.result = 'ABORTED'
-        echo "After timeout for the pipeline"
-    }
+    //     // this.jenkins.currentBuild.result = 'ABORTED'
+    //     echo "After timeout for the pipeline"
+    // }
 
     openShiftClient.configureCredentials(namespaceToRegistryToCredentialId)
   }
