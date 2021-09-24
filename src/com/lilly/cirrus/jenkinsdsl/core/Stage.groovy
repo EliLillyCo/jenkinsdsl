@@ -35,7 +35,7 @@ class Stage extends JenkinsScope {
         echo " Running [${this.name}] stage"
 
         stage(this.name) {
-          if (this.name == 'podTemplate')
+          if (this.name == 'Prepare Enterprise Image')
             {
               sleep(30)
               echo " Sleeping 30 sec in [${this.name}] stage"
