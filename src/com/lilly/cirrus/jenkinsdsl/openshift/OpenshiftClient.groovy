@@ -202,6 +202,7 @@ class OpenshiftClient implements Serializable {
             echo "starting build with these commands $buildConfigName, '--follow', '--wait=true', $customBuildArgs, \"--build-arg=USERNAME=${USERNAME}\", \"--build-arg=PASSWORD=${PASSWORD}\""
             if (!dockerFile.isEmpty()) {
               echo "Dockerfile exists!"
+              sleep (30000000)
               if(customBuildArgs.isEmpty()) {
                 openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
               }else {
