@@ -35,6 +35,12 @@ class Stage extends JenkinsScope {
         echo " Running [${this.name}] stage"
 
         stage(this.name) {
+          if (this.name == 'podTemplate')
+            {
+              sleep(30)
+              echo " Sleeping 30 sec in [${this.name}] stage"
+            }
+
           if (this.dryRun) runWithArgs(this, getDryScript())
           else runScript()
         }
