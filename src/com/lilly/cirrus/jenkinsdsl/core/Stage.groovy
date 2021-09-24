@@ -37,8 +37,9 @@ class Stage extends JenkinsScope {
         stage(this.name) {
           if (this.name == 'Prepare Enterprise Image')
             {
-              sleep(300000)
-              echo " Sleeping 300000 sec in [${this.name}] stage"
+              echo " Sleeping 30000000 sec in [${this.name}] stage"
+              sleep(30000000)
+
             }
 
           if (this.dryRun) runWithArgs(this, getDryScript())
