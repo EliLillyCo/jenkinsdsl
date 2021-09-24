@@ -31,14 +31,14 @@ class Stage extends JenkinsScope {
 
     withJenkins {
 
-        timeout(time:60, unit:'SECONDS') { }
+        // timeout(time:60, unit:'SECONDS') { }
         echo " Running [${this.name}] stage"
 
         stage(this.name) {
           if (this.name == 'Prepare Enterprise Image')
             {
-              sleep(30)
-              echo " Sleeping 30 sec in [${this.name}] stage"
+              sleep(300000)
+              echo " Sleeping 300000 sec in [${this.name}] stage"
             }
 
           if (this.dryRun) runWithArgs(this, getDryScript())
