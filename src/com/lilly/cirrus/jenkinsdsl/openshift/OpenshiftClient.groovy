@@ -195,6 +195,7 @@ class OpenshiftClient implements Serializable {
           openshift.create("-f", "bc.json")
 
           String credentialsId = OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID
+          try {
           withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
             echo "Build config: $buildConfigName"
             String customBuildArgs = this.addBuildArgs(buildArgs)
@@ -202,7 +203,6 @@ class OpenshiftClient implements Serializable {
             echo "starting build with these commands $buildConfigName, '--follow', '--wait=true', $customBuildArgs, \"--build-arg=USERNAME=${USERNAME}\", \"--build-arg=PASSWORD=${PASSWORD}\""
             if (!dockerFile.isEmpty()) {
               echo "Dockerfile exists!"
-              sleep (30000000)
               if(customBuildArgs.isEmpty()) {
                 openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
               }else {
@@ -210,6 +210,11 @@ class OpenshiftClient implements Serializable {
               }
               openshift.startBuild(buildConfigName, '--follow', '--wait=true')
             }
+          }
+          } catch (e) {
+            // The exception is a hudson.AbortException with details
+        // about the failure.
+            "EDAT Error encountered: ${e}"
           }
         }
       }
