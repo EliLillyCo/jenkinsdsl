@@ -11,7 +11,6 @@ abstract class PodTemplate implements Serializable {
   static final boolean CONTAINER_TTY_ENABLED = true
   static final String CONTAINER_COMMAND = "cat"
 
-  protected String label
   protected String nameSpace
   protected String serviceAccount
   protected List<String> imagePullSecrets = []
@@ -65,16 +64,14 @@ abstract class PodTemplate implements Serializable {
     return spec
   }
 
-  abstract String getLabel()
   abstract protected String getPodSpec()
 
   def execute(def jenkins, Closure<?> closure) {
     if (!this.containers) throw new CirrusPipelineException('The pod is missing containers to run')
 
-    def label = this.getLabel()
     run(jenkins) {
-      podTemplate(label: label, namespace: this.nameSpace, yaml: this.getPodSpec()) {
-        node(label) {
+      podTemplate(namespace: this.nameSpace, yaml: this.getPodSpec()) {
+        node(POD_LABEL) {
           run jenkins, closure
         }
       }
