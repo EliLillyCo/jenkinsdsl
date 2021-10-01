@@ -220,7 +220,10 @@ class OpenshiftClient implements Serializable {
           } catch (e) {
             // The exception is a hudson.AbortException with details
             // about the failure.
+
             echo "EDAT Error encountered bulding Docker image : ${bcText}"
+            echo "Error encountered: ${e}"
+            throw ${e}
           }
         }
       }
