@@ -210,9 +210,9 @@ class OpenshiftClient implements Serializable {
               if (!dockerFile.isEmpty()) {
                 echo "Dockerfile exists!"
                 if(customBuildArgs.isEmpty()) {
-                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=UxSERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
                 }else {
-                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', customBuildArgs, "--build-arg=UxSERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', customBuildArgs, "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
                 }
                 openshift.startBuild(buildConfigName, '--follow', '--wait=true')
               }
@@ -220,7 +220,7 @@ class OpenshiftClient implements Serializable {
           } catch (e) {
             // The exception is a hudson.AbortException with details
             // about the failure.
-            "EDAT Error encountered bulding Docker image : ${bcText}"
+            echo "EDAT Error encountered bulding Docker image : ${bcText}"
           }
         }
       }
