@@ -1,331 +1,404 @@
 package com.lilly.cirrus.jenkinsdsl.openshift
 
+import com.lilly.cirrus.jenkinsdsl.container.Label
 import com.lilly.cirrus.jenkinsdsl.core.ArtifactoryImage
-import com.lilly.cirrus.jenkinsdsl.sim.CirrusDSLSpec
-import com.lilly.cirrus.jenkinsdsl.sim.JenkinsSim
 import com.lilly.cirrus.jenkinsdsl.core.CirrusPipelineException
-import com.lilly.cirrus.jenkinsdsl.sim.SimFactory
+import com.lilly.cirrus.jenkinsdsl.core.OpenshiftPodTemplate
+import com.lilly.cirrus.jenkinsdsl.core.PodTemplate
+import com.lilly.cirrus.jenkinsdsl.utility.Exceptions
 import org.jenkinsci.plugins.credentialsbinding.impl.CredentialNotFoundException
 
-class OpenShiftClientSpec extends CirrusDSLSpec {
-  String getTestString(int length) {
-    StringBuilder builder = new StringBuilder()
-    for (int i = 0; i < length; ++i) {
-      builder.append('A')
+import static com.lilly.cirrus.jenkinsdsl.core.DelegateFirstRunner.run
+
+class OpenshiftClient implements Serializable {
+  private static final long serialVersionUID = 2745681873173850600L
+  static final String DEFAULT_REGISTRY_CREDENTIALS_ID = 'default-docker-credentials'
+  static final String BUILD_CONFIG_TEMP_FILE = 'bc.json'
+
+  def jenkins
+  protected String jobName
+  protected def registrySecrets = [:]
+  protected def buildConfigs = [:]
+  protected def namespacesWithCredentials = []
+  String containerLabel
+
+  String normalize(String text) {
+    text = text.replaceAll("[^a-zA-Z0-9]", "").toLowerCase()
+    int textLen = text.length()
+    return text.substring(0, textLen > 45 ? 45 : textLen)
+  }
+
+  String getJobName() {
+    if(this.@jobName) return this.@jobName
+
+    this.@jobName = normalize(this.jenkins.env.JOB_NAME)
+    return this.@jobName
+  }
+
+  String getSecretName(String registry) {
+    getOrCreateName(registry, registrySecrets, "sc")
+  }
+
+  String getBuildConfigName(String image) {
+    getOrCreateName(image, buildConfigs, "bc")
+  }
+
+  protected String getOrCreateName(String key, Map map, String suffix) {
+    if (map.containsKey(key))
+      return map[key]
+
+    int id = map.size() + 1
+    String name = "dsl.${getJobName()}${id}.${suffix}"
+    map[key] = name
+    return name
+  }
+
+  void runInPod(String namespace, String containerName='ocp-base-dsl', Closure<?> closure) {
+    ArtifactoryImage image = new ArtifactoryImage(
+      nameWithTag: containerName,
+      image: 'openshift3/jenkins-slave-base-rhel7:v3.11'
+    )
+    PodTemplate pod = new OpenshiftPodTemplate(
+      nameSpace: namespace,
+      serviceAccount: 'jenkins-slave'
+    )
+    pod.addContainer(image)
+
+    pod.execute(this.jenkins) {
+      container(containerName) {
+        closure()
+      }
     }
-    return builder.toString()
   }
 
+  void configureCredentials(Map namespaceToRegistryToCredentialId) {
+    namespaceToRegistryToCredentialId.each { namespace, registryToCredentialId ->
+      this.namespacesWithCredentials << namespace
+      runInPod(namespace) {
+        registryToCredentialId.each { registry, credentialId ->
+          String secretName = this.getSecretName(registry)
 
-  def "openshift client should return a jobname that can be used in openshift for creating secrets"() {
-    given: "a mock environment and an openshift client"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
+          run(jenkins) {
+            try {
+            withCredentials([usernamePassword(credentialsId: "${credentialId}",
+              usernameVariable: "USER", passwordVariable: "PASSWORD")]) {
+              openshift.withCluster {
+                def secret = openshift.selector("secret", secretName)
+                if (secret.exists()) {
+                  echo "Deleting existing Openshift secret [${secretName}] ..."
+                  secret.delete()
+                }
 
-    when: "a job name is retrieved"
-    String jobName = openShiftClient.jobName
+                echo "Creating new Openshift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
+                openshift.secrets([
+                  "new-dockercfg",
+                  "${secretName}",
+                  "--docker-email=${USER}",
+                  "--docker-username=${USER}",
+                  "--docker-password=${PASSWORD}",
+                  "--docker-server=${registry}"
+                ])
+                openshift.raw([
+                  "label",
+                  "secret/${secretName}",
+                  "jobName=${secretName}"
+                ])
+              }
+            }
+            } catch (e) {
+                echo "Failed to Create new OpenShift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
+                throw new Exception("Something went wrong during OpenShift configureCredentials!")
+            }
 
-    then: "the job name returned will be 45 character long, all small"
-    jobName.length() == 45
-    jobName == this.getTestString(45).toLowerCase()
-  }
-
-  def "openshift client  should return a jobname that can be used in openshift for creating secrets even for long job names"() {
-    given: "a mock environment and an openshift client"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(46)])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    when: "a job name is retrieved"
-    String jobName = openShiftClient.jobName
-
-    then: "the job name returned will be 45 character long, all small"
-    jobName.length() == 45
-    jobName == this.getTestString(45).toLowerCase()
-
-    and: "the same job name is cached"
-    openShiftClient.jobName == this.getTestString(45).toLowerCase()
-  }
-
-  def "getting a secret name creates a new secret name if one does not exist"() {
-    given: "a mock environment and an openshift client"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-
-    when: "a secret name for registry is retrieved"
-    String secretName = openShiftClient.getSecretName("registry")
-
-    then: "a secret name is created if one does not exist"
-    secretName != null
-
-    and: "the same secret name is return when asked for the same registry"
-    openShiftClient.getSecretName("registry").is(secretName)
-  }
-
-  def "runInPod runs the given closure in openshift pod"() {
-    given: "an openshift client configured with a registry credential id"
-    String podNamespace = "cje-slaves-freestyle-dmz"
-    String containerName = "my-container"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding("cred-id", [USER: "user", PASSWORD: "password"])
-
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-    openShiftClient.configureCredentials("${podNamespace}": ["registry": "cred-id"])
-    boolean closureExecuted = false
-
-    when: "A closure is run in a prod"
-    openShiftClient.runInPod(podNamespace, containerName, { closureExecuted = true })
-
-    then: "pipeline executes needed pipeline actions"
-    pipeline.anchor(SimFactory.node({ label -> label.startsWith("oc-dsl") }))
-      .next(SimFactory.container(containerName))
-
-    and: "the closure gets executed"
-    closureExecuted
-  }
-
-  def "creating a docker secret configures the pipeline with the secret"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding("cred-id", [USER: "user", PASSWORD: "password"])
-
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    when: "docker secret is created"
-    openShiftClient.configureCredentials("cje-slaves-freestyle-dmz": ["registry": "cred-id"])
-    String secretName = openShiftClient.getSecretName("registry")
-
-    then: "pipeline executes needed pipeline actions"
-    pipeline.anchor(SimFactory.node({ label -> label.startsWith("oc-dsl") }))
-      .next(SimFactory.container("ocp-base-dsl"))
-      .next(SimFactory.secrets([
-        "new-dockercfg",
-        "${secretName}",
-        "--docker-email=user",
-        "--docker-username=user",
-        "--docker-password=password",
-        "--docker-server=registry"
-      ]))
-      .next(SimFactory.raw([
-        "label",
-        "secret/${secretName}",
-        "jobName=${secretName}"
-      ]))
-  }
-
-  def "createDockerImage should run the openshift startBuild command to build a docker image with custom build args"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding(OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID, [USERNAME: "user", PASSWORD: "password"])
-
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    and: 'a container image, docker file, and namespace to use to build a new image'
-    ArtifactoryImage image = ArtifactoryImage.fromString("elilillyco-lilly-docker.jfrog.io/python:3.7.9")
-    String dockerFile = "A Mock Dockerfile"
-    String namespace = "a-mock-namespace"
-
-    Map buildArgs = [GITHUB_TOKEN: 'github-secret-token']
-
-    when: "docker image is created"
-    openShiftClient.createDockerImage(buildArgs, image, dockerFile, namespace)
-
-    then: "pipeline executes needed pipeline actions"
-    pipeline >> SimFactory.node({ label -> label.startsWith("oc-dsl") }) +
-      SimFactory.container("ocp-base-dsl") +
-      SimFactory.withCluster() +
-      SimFactory.selector(['buildconfig', _]) +
-      SimFactory.exists() +
-      SimFactory.delete() +
-      SimFactory.writeFile(file: "bc.json", text: _) +
-      SimFactory.create(["-f", "bc.json"]) +
-      SimFactory.startBuild([_, '--follow', '--wait=true', "--build-arg=GITHUB_TOKEN=github-secret-token",
-                                                                   "--build-arg=USERNAME=user", "--build-arg=PASSWORD=password"])
-  }
-
-  def "deleteSecrets should cleanup any docker secrets and build configs by calling appropriate openshift commands and no build args"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding(OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID, [
-      USERNAME: "user", PASSWORD: "password"
-    ])
-
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    and: 'a container image, docker file, and namespace to use to build a new image'
-    ArtifactoryImage image = ArtifactoryImage.fromString("elilillyco-lilly-docker.jfrog.io/python:3.7.9")
-    String dockerFile = "A Mock Dockerfile"
-    String namespace = "cje-slaves-freestyle-dmz"
-
-    when: "the delecteSecrets is called after creating docker secrets and building a new docker image"
-    openShiftClient.configureCredentials("${namespace}": ["registry": OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID])
-    openShiftClient.createDockerImage([:], image, dockerFile, namespace)
-    openShiftClient.deleteSecrets()
-
-    then: "pipeline executes necessary pipeline actions to delete the docker secrets and build configs"
-    pipeline >> SimFactory.secrets(_) +
-      SimFactory.startBuild([_, '--follow', '--wait=true', "--build-arg=USERNAME=user", "--build-arg=PASSWORD=password"]) +
-      SimFactory.container("ocp-base-dsl") +
-      SimFactory.withCluster() +
-      SimFactory.selector(['secret', _]) +
-      SimFactory.exists() +
-      SimFactory.delete() +
-      SimFactory.selector(['buildconfig', _]) +
-      SimFactory.exists() +
-      SimFactory.delete()
-  }
-
-  def "environment variables for build will set credentials"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding(OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID, [
-      USERNAME: "user", PASSWORD: "password",
-      USER: "user", PASSWORD: "password"
-    ])
-    def appConfig = [
-      envCredentials: ['cred1', 'cred2'],
-      envVariables: [:]
-    ]
-    pipeline.withCredentialBinding('cred1', [
-      'BUILD_CREDENTIAL': 'testing1'
-    ])
-    pipeline.withCredentialBinding('cred2', [
-      'BUILD_CREDENTIAL': 'testing2'
-    ])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    when: "method called"
-    def envs = openShiftClient.environmentVariablesForBuild(appConfig.envCredentials, appConfig.envVariables)
-
-    then: 'envs should have values'
-    envs.cred1 == 'testing1'
-    envs.cred2 == 'testing2'
-  }
-
-  def "environment variables call will echo cred not found for all not found creds"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    pipeline.withCredentialBinding(OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID, [
-      USERNAME: "user", PASSWORD: "password",
-      USER: "user", PASSWORD: "password"
-    ])
-    def appConfig = [
-      envCredentials: ['cred1', 'cred2'],
-      envVariables: [:]
-    ]
-    pipeline.withCredentialBinding('cred1', [
-      'BUILD_CREDENTIAL': 'testing1'
-    ])
-    pipeline.withCredentialBinding('cred2', [
-      'BUILD_CREDENTIAL': 'testing2'
-    ])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
-
-    pipeline.when(SimFactory.echo({it.contains('Reading')})).then {
-      throw new CredentialNotFoundException('testing')
+          }
+        }
+      }
     }
-
-    when: "method called"
-    openShiftClient.environmentVariablesForBuild(appConfig.envCredentials, appConfig.envVariables)
-
-    then: 'should break'
-    pipeline >> SimFactory.echo({it.contains('Jenkins Credential not found for cred1')}) +
-      SimFactory.echo({it.contains('Jenkins Credential not found for cred2')})
-
   }
 
-  def "build will not call with build arg if no docker file"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
+  String getBuildConfig(ArtifactoryImage containerImage, String dockerFile) {
+    String image = containerImage.image
+    String buildConfigName = this.getBuildConfigName(image)
+    String registrySecretName = this.getSecretName(containerImage.registry)
 
-    pipeline.when(SimFactory.fileExists('Dockerfile')).then {
-      false
+    return """{
+      "apiVersion": "v1",
+      "kind": "BuildConfig",
+      "metadata": {
+        "name": "${buildConfigName}",
+        "labels": {
+          "jobName": "${buildConfigName}"
+        }
+      },
+      "spec": {
+        "output": {
+          "to": {
+            "kind": "DockerImage",
+            "name": "${image}"
+          },
+          "pushSecret": {
+            "name": "${registrySecretName}"
+          }
+        },
+        "resources": {},
+        "source": {
+          "type": "Dockerfile",
+          "dockerfile": ${dockerFile}
+        },
+        "strategy": {
+          "type": "Docker",
+          "dockerStrategy": {
+            "pullSecret": {
+              "name": "${registrySecretName}"
+            }
+          }
+        }
+      }
+    }"""
+  }
+
+  void deleteSecrets() {
+    this.namespacesWithCredentials.each { namespace ->
+      runInPod(namespace) {
+        run(jenkins) {
+          openshift.withCluster {
+            this.registrySecrets.values().each {
+              def secret = openshift.selector("secret", it)
+              if (secret.exists()) {
+                echo "Deleting secret [${it}] ..."
+                secret.delete()
+              }
+            }
+
+            this.buildConfigs.values().each {
+              def buildConfig = openshift.selector("buildconfig", it)
+              if (buildConfig.exists()) {
+                echo "Deleting build config [${it}] ..."
+                buildConfig.delete()
+              }
+            }
+          }
+        }
+      }
     }
-
-    when: "build is called"
-    openShiftClient.build('fake_name')
-
-    then: "the correct start build is called"
-    pipeline >> SimFactory.startBuild(['fake_name', '--follow', '--wait=true'])
   }
 
-  def "create token secret will catch and throw an error on an error"() {
-    given: "an openshift client configured with a registry credential id"
-    JenkinsSim pipeline = createJenkinsSim()
-    pipeline.withEnv([JOB_NAME: this.getTestString(45)])
-    OpenshiftClient openShiftClient = new OpenshiftClient(jenkins: pipeline)
 
-    pipeline.when(SimFactory.secrets([_, _, "--password=token"])).then {
-      throw new Exception('testing')
+  void createDockerImage(Map buildArgs, ArtifactoryImage containerImage, String dockerFile, String namespace) {
+    runInPod(namespace) {
+      run(jenkins) {
+        openshift.withCluster {
+          String buildConfigName = this.getBuildConfigName(containerImage.image)
+
+          def buildConfig = openshift.selector("buildconfig", buildConfigName)
+          if (buildConfig.exists()) {
+            echo "Deleting existing build config [${buildConfigName}] ..."
+            buildConfig.delete()
+          }
+
+          String bcText = this.getBuildConfig(containerImage, dockerFile)
+          writeFile file: "bc.json", text: "${bcText}"
+          openshift.create("-f", "bc.json")
+
+          String credentialsId = OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID
+          try {
+            withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+              echo "Build config: $buildConfigName"
+              String customBuildArgs = this.addBuildArgs(buildArgs)
+              echo "custom build args: ${customBuildArgs}"
+              echo "starting build with these commands $buildConfigName, '--follow', '--wait=true', $customBuildArgs, \"--build-arg=USERNAME=${USERNAME}\", \"--build-arg=PASSWORD=${PASSWORD}\""
+              if (!dockerFile.isEmpty()) {
+                echo "Dockerfile exists!"
+                if(customBuildArgs.isEmpty()) {
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                }else {
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', customBuildArgs, "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                }
+                openshift.startBuild(buildConfigName, '--follow', '--wait=true')
+              }
+            }
+          } catch (e) {
+            // The exception is a hudson.AbortException with details
+            // about the failure.
+            echo "Error encountered bulding Docker image : ${bcText}"
+            throw new Exception("Something went wrong during OpenShift Docker build!")
+          }
+        }
+      }
     }
-
-    when: "createTokenSecret is called"
-    openShiftClient.createTokenSecret(SecretType.DOCKER_REGISTRY, 'name', 'token')
-
-    then: "the correct jenkins calls are called"
-    pipeline >> SimFactory.echo("Could not setup secret [type: new-dockercfg, name: name]") +
-      SimFactory.echo({it.contains('testing')})
-
-    and: 'throws'
-    thrown(Exception)
   }
 
-  def "openShift addBuildArgs test when buildArgs map contains username"() {
-    given: "an openShift client"
-    JenkinsSim jenkinsSim = createJenkinsSim()
-    OpenshiftClient osc = new OpenshiftClient(jenkins: jenkinsSim)
-
-    and: "custom build args map"
-    Map customBuildArgs = [USERNAME: "USERNAME", GITHUB_TOKEN: "token"]
-
-    when: "openShift client addBuildArgs is called"
-    osc.addBuildArgs(customBuildArgs)
-
-    then: "should throw an expected exception"
-    thrown(CirrusPipelineException)
+  String addBuildArgs(Map buildArgs) {
+    String prefix = ''
+    StringBuilder stringBuilder = new StringBuilder()
+    buildArgs.each {
+      key,value ->
+        if (key == 'USERNAME' || key == 'PASSWORD') {
+          throw new CirrusPipelineException("Build args cannot contain USERNAME and PASSWORD values ")
+        } else {
+          stringBuilder.append(prefix).append("--build-arg=${key}=${value}")
+          prefix = ', '
+        }
+    }
+    return stringBuilder.toString()
   }
 
-  def "openShift addBuildArgs test when buildArgs map contains password"() {
-    given: "an openShift client"
-    JenkinsSim jenkinsSim = createJenkinsSim()
-    OpenshiftClient osc = new OpenshiftClient(jenkins: jenkinsSim)
-
-    and: "custom build args map"
-    Map customBuildArgs = [PASSWORD: "USERNAME", GITHUB_TOKEN: "token"]
-
-    when: "openShift client addBuildArgs is called"
-    osc.addBuildArgs(customBuildArgs)
-
-    then: "should throw an expected exception"
-    thrown(CirrusPipelineException)
+  def environmentVariablesForBuild(def credentials, def envVars) {
+    if (credentials) {
+      for (int i = 0; i < credentials.asType(List).size(); i++) {
+        def credential = credentials[i]
+        try {
+          jenkins.withCredentials([
+            jenkins.string(
+              credentialsId: credential,
+              variable: "BUILD_CREDENTIAL"
+            )
+          ]) {
+            withCluster {
+              envVars[credential] = jenkins["BUILD_CREDENTIAL"]
+              jenkins.echo "Reading ${credential} from credentials: ${jenkins["BUILD_CREDENTIAL"]}"
+            }
+          }
+        } catch (CredentialNotFoundException exception) {
+          jenkins.echo "Jenkins Credential not found for ${credential}."
+        }
+      }
+    }
+    envVars
   }
 
-  def "openShift addBuildArgs test when valid buildArgs map is passed"() {
-    given: "an openShift client"
-    JenkinsSim jenkinsSim = createJenkinsSim()
-    OpenshiftClient osc = new OpenshiftClient(jenkins: jenkinsSim)
-
-    and: "custom build args map"
-    Map customBuildArgs = [GITHUB_TOKEN: 'github-secret-token', JIRA_TOKEN: 'jira-secret-token']
-
-    when: "openShift client addBuildArgs is called"
-    String buildArgsCommand = osc.addBuildArgs(customBuildArgs)
-
-    then: "should not throw an exception"
-    notThrown(CirrusPipelineException)
-
-    then: "should return expected buildArgs command"
-    buildArgsCommand == "--build-arg=GITHUB_TOKEN=github-secret-token, --build-arg=JIRA_TOKEN=jira-secret-token"
+  void rollout(ReleaseEnvironment environment, String projectName, String image, String imageStreamName, String deployConfigName, String serviceAccountCredential, String nonProdUrl) {
+    jenkins.withCredentials([
+      jenkins.string(
+        credentialsId: serviceAccountCredential,
+        variable: "OS_PROJECT_SERVICE_ACCOUNT"
+      )
+    ]) {
+      Closure openshiftClosure = {
+        jenkins.openshift.withProject(projectName) {
+          jenkins.openshift.withCredentials(jenkins.OS_PROJECT_SERVICE_ACCOUNT) {
+            jenkins.openshift.raw("import-image", "--confirm=true", imageStreamName, "--from=${image}")
+            jenkins.openshift.raw("set", "image", "dc/${deployConfigName}", "${deployConfigName}=${imageStreamName}", "--source=imagestreamtag")
+            jenkins.openshift.selector("dc", deployConfigName).rollout().latest()
+          }
+        }
+      }
+      if (environment == ReleaseEnvironment.Production) {
+        //do not use cluster
+        jenkins.openshift.withCluster() {
+          jenkins.echo "Rolling out to prod cluster"
+          openshiftClosure()
+        }
+      } else {
+        jenkins.openshift.withCluster(nonProdUrl, jenkins.OS_PROJECT_SERVICE_ACCOUNT) {
+          jenkins.echo "From project ${projectName}"
+          openshiftClosure()
+        }
+      }
+    }
   }
+
+  String cleanValue(String value) {
+    String possiblyShortenedValue = value.size() > Label.LENGTH_LIMIT ? value[-Label.LENGTH_LIMIT..-1] : value
+    String noSlashesValue = possiblyShortenedValue.replaceAll('/', '.')
+    Label kubernetesLabel = new Label(baseText: noSlashesValue)
+    return kubernetesLabel.toString()
+  }
+
+  void deleteBuildConfigsByLabel(String labelName, String labelValue) {
+    withCluster {
+      def result = jenkins.openshift.delete('buildconfig', '-l', "${labelName}=${cleanValue(labelValue)}")
+      printResultOutput(result, 'delete')
+    }
+  }
+
+  void printResultOutput(result, label) {
+    if (result && result.actions) {
+      jenkins.echo "[${label}] > ${result.actions[0]?.cmd}"
+      jenkins.echo "[${label}] ${result.actions[0]?.out.replaceAll('\n', '\n[' + label + '] ')}"
+    }
+  }
+
+  void labelSecret(String name, String labelName, String labelValue) {
+    withCluster {
+      def result = jenkins.openshift.raw('label', "--overwrite", "secret/${name.toLowerCase()}", "${labelName}=${cleanValue(labelValue)}")
+      printResultOutput(result, 'label')
+    }
+  }
+
+  def generateBuildConfig(String json) {
+    withCluster {
+      jenkins.writeFile file: BUILD_CONFIG_TEMP_FILE, text: json
+      def result = jenkins.openshift.create('-f', BUILD_CONFIG_TEMP_FILE)
+      printResultOutput(result, 'create')
+    }
+  }
+
+  void createDockerSecret(String name, String registry, String username, String password) {
+    withCluster {
+      def result = jenkins.openshift.secrets(
+        SecretType.DOCKER_REGISTRY.typeIdentifier,
+        name.toLowerCase(),
+        "--docker-email=${username}",
+        "--docker-username=${username}",
+        "--docker-password=${password}",
+        "--docker-server=${registry}"
+      )
+      printResultOutput(result, 'secrets')
+    }
+  }
+
+  void build(String buildConfigName, String user='', String password='') {
+
+    withCluster {
+      try {
+        if(jenkins.fileExists('Dockerfile')) {
+          jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${user}", "--build-arg=PASSWORD=${password}")
+        } else {
+          jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true')
+        }
+      } catch (Exception e) {
+        jenkins.echo "Could not complete Openshift build for user User: ${user}"
+        throw new Exception("Something went wrong during OpenShift build!")
+      }
+    }
+  }
+
+  void deleteSecretsByLabel(String labelName, String labelValue) {
+    withCluster {
+      def result = jenkins.openshift.delete('secret', '-l', "${labelName}=${cleanValue(labelValue)}")
+      printResultOutput(result, 'delete')
+    }
+  }
+
+  void createTokenSecret(SecretType type, String name, String token) {
+    jenkins.echo "S2I SecretType: ${type.typeIdentifier}, Name: ${name}, Token: ${token}"
+
+    withCluster {
+      try {
+        def result = jenkins.openshift.secrets(type.typeIdentifier, name.toLowerCase(), "--password=${token}")
+        printResultOutput(result, 'secrets')
+      }
+      catch (Exception e) {
+        jenkins.echo "Could not setup secret [type: ${type.typeIdentifier}, name: ${name}]"
+        throw new Exception("Something went wrong during OpenShift createTokenSecret!")
+      }
+    }
+  }
+
+  // Remember this is different than openshift.withCluster as containerLabel cannot be null
+  private def withCluster(Closure clusterClosure) {
+    jenkins.openshift.withCluster() {
+      jenkins.container(containerLabel) {
+        clusterClosure()
+      }
+    }
+  }
+
+  private def withProject(String projectName, Closure projectClosure) {
+    jenkins.openshift.withProject(projectName) {
+      projectClosure()
+    }
+  }
+
 }
