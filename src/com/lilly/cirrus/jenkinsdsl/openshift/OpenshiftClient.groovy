@@ -106,8 +106,8 @@ class OpenshiftClient implements Serializable {
               }
             }
             } catch (e) {
-                echo "Failed to Create new Openshift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
-                throw e
+                echo "Failed to Create new OpenShift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
+                throw new Exception("Something went wrong during OpenShift configureCredentials!")
             }
 
           }
@@ -220,11 +220,8 @@ class OpenshiftClient implements Serializable {
           } catch (e) {
             // The exception is a hudson.AbortException with details
             // about the failure.
-
-            echo "EDAT Error encountered bulding Docker image : ${bcText}"
-            // echo "Error encountered: ${e}"
-            // throw e
-            throw new Exception("Something went wrong during Docker build!")
+            echo "Error encountered bulding Docker image : ${bcText}"
+            throw new Exception("Something went wrong during OpenShift Docker build!")
           }
         }
       }
@@ -361,9 +358,8 @@ class OpenshiftClient implements Serializable {
           jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true')
         }
       } catch (Exception e) {
-        jenkins.echo "Could not complete Openshift build [ for user User: ${user}]"
-        jenkins.echo Exceptions.printStackTrace(e)
-        throw e
+        jenkins.echo "Could not complete Openshift build for user User: ${user}"
+        throw new Exception("Something went wrong during OpenShift build!")
       }
     }
   }
@@ -385,8 +381,7 @@ class OpenshiftClient implements Serializable {
       }
       catch (Exception e) {
         jenkins.echo "Could not setup secret [type: ${type.typeIdentifier}, name: ${name}]"
-        jenkins.echo Exceptions.printStackTrace(e)
-        throw e
+        throw new Exception("Something went wrong during OpenShift createTokenSecret!")
       }
     }
   }
