@@ -274,8 +274,8 @@ class OpenShiftClientSpec extends CirrusDSLSpec {
     openShiftClient.createTokenSecret(SecretType.DOCKER_REGISTRY, 'name', 'token')
 
     then: "the correct jenkins calls are called"
-    pipeline >> SimFactory.echo("Could not setup secret [type: new-dockercfg, name: name]") +
-      SimFactory.echo({it.contains('testing')})
+    pipeline >> SimFactory.echo("Could not setup secret [type: new-dockercfg, name: name]")
+    // + SimFactory.echo({it.contains('testing')})
 
     and: 'throws'
     thrown(Exception)

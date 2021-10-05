@@ -30,10 +30,21 @@ class Stage extends JenkinsScope {
     this.stages[name] = this.@stageConfig // stages defined at EntryPoint.start()
 
     withJenkins {
-      stage(this.name) {
-        if (this.dryRun) runWithArgs(this, getDryScript())
-        else runScript()
-      }
+
+        // timeout(time:60, unit:'SECONDS') { }
+        echo " Running [${this.name}] stage"
+
+        stage(this.name) {
+
+
+          if (this.dryRun) runWithArgs(this, getDryScript())
+          else runScript()
+          // if (this.name == 'Prepare Enterprise Image')
+          //   {
+          //     echo " Sleeping 30000000 sec in [${this.name}] stage"
+          //     // sleep(30000000)
+          //   }
+        }
     }
 
     this.reduceScope()

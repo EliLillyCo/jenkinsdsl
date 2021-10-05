@@ -79,6 +79,7 @@ class OpenshiftClient implements Serializable {
           String secretName = this.getSecretName(registry)
 
           run(jenkins) {
+            try {
             withCredentials([usernamePassword(credentialsId: "${credentialId}",
               usernameVariable: "USER", passwordVariable: "PASSWORD")]) {
               openshift.withCluster {
@@ -104,6 +105,11 @@ class OpenshiftClient implements Serializable {
                 ])
               }
             }
+            } catch (e) {
+                echo "Failed to Create new OpenShift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
+                throw new Exception("Something went wrong during OpenShift configureCredentials!")
+            }
+
           }
         }
       }
@@ -142,7 +148,9 @@ class OpenshiftClient implements Serializable {
         "strategy": {
           "type": "Docker",
           "dockerStrategy": {
-            "noCache": true
+            "pullSecret": {
+              "name": "${registrySecretName}"
+            }
           }
         }
       }
@@ -193,20 +201,27 @@ class OpenshiftClient implements Serializable {
           openshift.create("-f", "bc.json")
 
           String credentialsId = OpenshiftClient.DEFAULT_REGISTRY_CREDENTIALS_ID
-          withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-            echo "Build config: $buildConfigName"
-            String customBuildArgs = this.addBuildArgs(buildArgs)
-            echo "custom build args: ${customBuildArgs}"
-            echo "starting build with these commands $buildConfigName, '--follow', '--wait=true', $customBuildArgs, \"--build-arg=USERNAME=${USERNAME}\", \"--build-arg=PASSWORD=${PASSWORD}\""
-            if (!dockerFile.isEmpty()) {
-              echo "Dockerfile exists!"
-              if(customBuildArgs.isEmpty()) {
-                openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
-              }else {
-                openshift.startBuild(buildConfigName, '--follow', '--wait=true', customBuildArgs, "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+          try {
+            withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+              echo "Build config: $buildConfigName"
+              String customBuildArgs = this.addBuildArgs(buildArgs)
+              echo "custom build args: ${customBuildArgs}"
+              echo "starting build with these commands $buildConfigName, '--follow', '--wait=true', $customBuildArgs, \"--build-arg=USERNAME=${USERNAME}\", \"--build-arg=PASSWORD=${PASSWORD}\""
+              if (!dockerFile.isEmpty()) {
+                echo "Dockerfile exists!"
+                if(customBuildArgs.isEmpty()) {
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                }else {
+                  openshift.startBuild(buildConfigName, '--follow', '--wait=true', customBuildArgs, "--build-arg=USERNAME=${USERNAME}", "--build-arg=PASSWORD=${PASSWORD}")
+                }
+                openshift.startBuild(buildConfigName, '--follow', '--wait=true')
               }
-              openshift.startBuild(buildConfigName, '--follow', '--wait=true')
             }
+          } catch (e) {
+            // The exception is a hudson.AbortException with details
+            // about the failure.
+            echo "Error encountered bulding Docker image : ${bcText}"
+            throw new Exception("Something went wrong during OpenShift Docker build!")
           }
         }
       }
@@ -334,11 +349,17 @@ class OpenshiftClient implements Serializable {
   }
 
   void build(String buildConfigName, String user='', String password='') {
+
     withCluster {
-      if(jenkins.fileExists('Dockerfile')) {
-        jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${user}", "--build-arg=PASSWORD=${password}")
-      } else {
-        jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true')
+      try {
+        if(jenkins.fileExists('Dockerfile')) {
+          jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true', "--build-arg=USERNAME=${user}", "--build-arg=PASSWORD=${password}")
+        } else {
+          jenkins.openshift.startBuild(buildConfigName, '--follow', '--wait=true')
+        }
+      } catch (Exception e) {
+        jenkins.echo "Could not complete Openshift build for user User: ${user}"
+        throw new Exception("Something went wrong during OpenShift build!")
       }
     }
   }
@@ -360,8 +381,7 @@ class OpenshiftClient implements Serializable {
       }
       catch (Exception e) {
         jenkins.echo "Could not setup secret [type: ${type.typeIdentifier}, name: ${name}]"
-        jenkins.echo Exceptions.printStackTrace(e)
-        throw e
+        throw new Exception("Something went wrong during OpenShift createTokenSecret!")
       }
     }
   }
