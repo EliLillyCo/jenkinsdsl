@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - Use Docker image cache when making OpenShift BuildConfigs
+- Changed exception handling in OpenShift client code for secure log messages
 
 ### Fixed
 - Fix formatting of OpenShift BuildConfig pull secret
@@ -16,8 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Created
 - `SECURITY.md` file creation.
-- GitHub Actions Workflow Creation. 
-- Updated dependenices resolving security problems. 
+- GitHub Actions Workflow Creation.
+- Updated dependenices resolving security problems.
 
 ### Fixed
 - Use pull secret when creating Docker images in OpenShift BuildConfigs
