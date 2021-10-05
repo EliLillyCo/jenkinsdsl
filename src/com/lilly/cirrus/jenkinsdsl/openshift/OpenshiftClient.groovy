@@ -222,8 +222,9 @@ class OpenshiftClient implements Serializable {
             // about the failure.
 
             echo "EDAT Error encountered bulding Docker image : ${bcText}"
-            echo "Error encountered: ${e}"
-            throw e
+            // echo "Error encountered: ${e}"
+            // throw e
+            throw new Exception("Something went wrong during Docker build!")
           }
         }
       }
