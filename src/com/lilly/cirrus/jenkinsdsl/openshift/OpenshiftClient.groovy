@@ -80,31 +80,31 @@ class OpenshiftClient implements Serializable {
 
           run(jenkins) {
             try {
-            withCredentials([usernamePassword(credentialsId: "${credentialId}",
-              usernameVariable: "USER", passwordVariable: "PASSWORD")]) {
-              openshift.withCluster {
-                def secret = openshift.selector("secret", secretName)
-                if (secret.exists()) {
-                  echo "Deleting existing Openshift secret [${secretName}] ..."
-                  secret.delete()
-                }
+              withCredentials([usernamePassword(credentialsId: "${credentialId}",
+                usernameVariable: "USER", passwordVariable: "PASSWORD")]) {
+                openshift.withCluster {
+                  def secret = openshift.selector("secret", secretName)
+                  if (secret.exists()) {
+                    echo "Deleting existing Openshift secret [${secretName}] ..."
+                    secret.delete()
+                  }
 
-                echo "Creating new Openshift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
-                openshift.secrets([
-                  "new-dockercfg",
-                  "${secretName}",
-                  "--docker-email=${USER}",
-                  "--docker-username=${USER}",
-                  "--docker-password=${PASSWORD}",
-                  "--docker-server=${registry}"
-                ])
-                openshift.raw([
-                  "label",
-                  "secret/${secretName}",
-                  "jobName=${secretName}"
-                ])
+                  echo "Creating new Openshift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
+                  openshift.secrets([
+                    "new-dockercfg",
+                    "${secretName}",
+                    "--docker-email=${USER}",
+                    "--docker-username=${USER}",
+                    "--docker-password=${PASSWORD}",
+                    "--docker-server=${registry}"
+                  ])
+                  openshift.raw([
+                    "label",
+                    "secret/${secretName}",
+                    "jobName=${secretName}"
+                  ])
+                }
               }
-            }
             } catch (e) {
                 echo "Failed to Create new OpenShift secrets [namespace: ${namespace}, registry: ${registry}, secret: ${secretName}] ..."
                 throw new Exception("Something went wrong during OpenShift configureCredentials!")
