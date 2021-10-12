@@ -14,19 +14,11 @@ class BuildAbortionStage extends Stage {
     withJenkins {
       echo "Checking for previous running builds to abort..."
 
-      def buildnum = env.BUILD_NUMBER.toInteger()
-      def job = currentBuild?.rawBuild?.parent
-
-      if (job && job.builds) {
-        for (build in job.builds) {
-          int buildId = build.getNumber()
-          if (!build.isBuilding()) { continue }
-          if (buildnum == build.getNumber().toInteger()) { continue }
-
-          echo ">> Aborting build #${build.getNumber()}"
-          build.doKill()
-        }
+      def buildNumber = BUILD_NUMBER as int
+      if (buildNumber > 1) {
+        milestone(buildNumber - 1)
       }
+      milestone(buildNumber)
 
       echo "Check for previous running builds complete. Proceeding to next stage, if any."
     }
